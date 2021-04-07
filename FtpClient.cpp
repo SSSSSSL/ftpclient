@@ -26,7 +26,7 @@ FtpClient::~FtpClient() {
 	Close();
 }
 /***********************CONNECT SERVER***********************/
-bool FtpClient::Connect(const char * _ServerAddress, int _ServerPort) {
+bool FtpClient::Connect(const char * _ServerAddress, int _ServerPort, int timeout) {
 	struct sockaddr_in serv_addr;
 
 	if (Socket != INVALID_SOCKET)
@@ -39,7 +39,7 @@ bool FtpClient::Connect(const char * _ServerAddress, int _ServerPort) {
 		return false;
 	}
 
-	if (Recv_Code("220")) 
+	if (Recv_Code("220", timeout))
 		return true;
 	
 	Close();
@@ -53,7 +53,7 @@ void FtpClient::Close() {
 }
 
 /***************************LOGIN****************************/
-bool FtpClient::Login(const char * ID, const char * PW) {
+bool FtpClient::Login(const char * ID, const char * PW, int timeout) {
 	char buf[BUF_SIZE];
 	int n;
 
@@ -62,14 +62,14 @@ bool FtpClient::Login(const char * ID, const char * PW) {
                 return false;
         }
 
-	if (Send("USER %s", ID) == false || Recv_Code("331") == false || Send("PASS %s", PW) == false || Recv_Code("230") == false)
+	if (Send("USER %s", ID) == false || Recv_Code("331", timeout) == false || Send("PASS %s", PW) == false || Recv_Code("230", timeout) == false)
 		return false;
 
 	return true;
 }
 
 /**************************UPLOAD****************************/
-bool FtpClient::Upload(char * FilePath) {
+bool FtpClient::Upload(char * FilePath, int timeout) {
 	char * FileName;
 
 	if (!Exist_File(FilePath)) {
@@ -83,7 +83,7 @@ bool FtpClient::Upload(char * FilePath) {
 		return false;
 	}
 
-	if (Send_Binary() == false || Send_Passive() == false) {
+	if (Send_Binary(timeout) == false || Send_Passive(timeout) == false) {
 		printf("Error, %s Send_Binary() & Send_Passive() error\n", __func__);
 		free(FileName);
 		return false;
@@ -143,7 +143,7 @@ bool FtpClient::Upload(char * FilePath) {
 
 	close(socket);
 
-	if (Recv_Code("150") == false || Recv_Code("226") == false) {
+	if (Recv_Code("150", timeout) == false || Recv_Code("226", timeout) == false) {
 		free(FileName);
 		return false;
 	}
@@ -154,10 +154,10 @@ bool FtpClient::Upload(char * FilePath) {
 	return true;
 }
 /*************************CURRENT DIR************************/
-bool FtpClient::Current_Dir(char ** DirName) {
+bool FtpClient::Current_Dir(char ** DirName, int timeout) {
 	char *Buffer, *start, *end;
 
-	if (Send("PWD") == false || (Buffer = Recv_Code_Buffer("257")) == NULL)
+	if (Send("PWD") == false || (Buffer = Recv_Code_Buffer("257", timeout)) == NULL)
 		return false;
 
 	start = Buffer;
@@ -179,8 +179,8 @@ bool FtpClient::Current_Dir(char ** DirName) {
 
 }
 /**************************LIST DIR**************************/
-bool FtpClient::List_Dir() {
-	if (Send_Binary() == false || Send_Passive() == false) {
+bool FtpClient::List_Dir(int timeout) {
+	if (Send_Binary(timeout) == false || Send_Passive(timeout) == false) {
 		printf("Error, %s Send_Binary() & Send_Passive() error\n", __func__);
 		return false;
 	}
@@ -217,33 +217,31 @@ bool FtpClient::List_Dir() {
 	printf("List End\n");
 
 	close(socket);
-	if (Recv_Code("150") == false)
+	if (Recv_Code("150", timeout) == false)
 		return false;
 
-	printf("Here\n");
-
-	if (Recv_Code("226") == false)
+	if (Recv_Code("226", timeout) == false)
 		return false;
 
 	return true;
 }
 /*************************CHANGE DIR*************************/
-bool FtpClient::Change_Dir(char * Dir) {
-	if (Send("CWD %s", Dir) == false || Recv_Code("250") == false)
+bool FtpClient::Change_Dir(char * Dir, int timeout) {
+	if (Send("CWD %s", Dir) == false || Recv_Code("250", timeout) == false)
 		return false;
 
 	return true;
 }
 /*************************CREATE DIR*************************/
-bool FtpClient::Create_Dir(char * Dir) {
-	if (Send("MKD %s", Dir) == false || Recv_Code("257") == false)
+bool FtpClient::Create_Dir(char * Dir, int timeout) {
+	if (Send("MKD %s", Dir) == false || Recv_Code("257", timeout) == false)
 		return false;
 
 	return true;
 }
 /*************************REMOVE DIR*************************/
-bool FtpClient::Remove_Dir(char * Dir) {
-	if (Send("RMD %s", Dir) == false || Recv_Code("250") == false)
+bool FtpClient::Remove_Dir(char * Dir, int timeout) {
+	if (Send("RMD %s", Dir) == false || Recv_Code("250", timeout) == false)
 		return false;
 
 	return true;
@@ -315,27 +313,27 @@ char * FtpClient::Get_Filename_By_Path(char * Path) {
 }
 
 /************************SEND BINARY*************************/
-bool FtpClient::Send_Binary() {
-	if (Send("TYPE I") == false || Recv_Code("200") == false)
+bool FtpClient::Send_Binary(int timeout) {
+	if (Send("TYPE I") == false || Recv_Code("200", timeout) == false)
 		return false;
 
 	return true;
 }
 
 /************************SEND ASCII**************************/
-bool FtpClient::Send_ASCII() {
-        if (Send("TYPE A") == false || Recv_Code("200") == false)
+bool FtpClient::Send_ASCII(int timeout) {
+        if (Send("TYPE A") == false || Recv_Code("200", timeout) == false)
                 return false;
 
         return true;
 }
 
 /***********************SEND PASSIVE*************************/
-bool FtpClient::Send_Passive() {
+bool FtpClient::Send_Passive(int timeout) {
 	char * Buffer, *token, *rest;
 	int arr[6], i=0;
 
-	if (Send("PASV") == false || (Buffer = Recv_Code_Buffer("227")) == NULL)
+	if (Send("PASV") == false || (Buffer = Recv_Code_Buffer("227", timeout)) == NULL)
 		return false;
 	rest = Buffer;
 
@@ -406,6 +404,34 @@ char* FtpClient::Recv_Code_Buffer(const char * Code) {
 }
 
 /*************************RECV CODE**************************/
+char* FtpClient::Recv_Code_Buffer(const char * Code, int timeout) {
+        int read_len, n;
+        char buffer[BUF_SIZE], *temp;
+	struct pollfd _poll[1];
+
+        if (Socket == INVALID_SOCKET) {
+                printf("Error, %s not connected\n", __func__);
+                return NULL;
+        }
+
+	_poll[0].fd = Socket;
+	_poll[0].events = POLLIN;
+	_poll[0].revents = 0;
+
+	n = poll(_poll, 1, 1000*timeout);
+	if ( n <= 0 )
+		return NULL;
+
+        read_len = recv(Socket, buffer, sizeof(buffer), 0);
+        buffer[read_len] = '\0';
+
+        temp = (char *)malloc(sizeof(char)*(read_len+1));
+        strcpy(temp, buffer);
+
+        return Code_Check(buffer, Code) ? temp : NULL;
+}
+
+/*************************RECV CODE**************************/
 bool FtpClient::Recv_Code(const char * Code) {
 	int read_len;	
 	char buffer[BUF_SIZE];
@@ -420,7 +446,30 @@ bool FtpClient::Recv_Code(const char * Code) {
 
 	return Code_Check(buffer, Code);
 }
+/*************************RECV CODE**************************/
+bool FtpClient::Recv_Code(const char * Code, int timeout) {
+        int read_len, n;
+        char buffer[BUF_SIZE];
+        struct pollfd _poll[1];
 
+        if (Socket == INVALID_SOCKET) {
+                printf("Error, %s not connected\n", __func__);
+                return false;
+        }
+
+        _poll[0].fd = Socket;
+        _poll[0].events = POLLIN;
+        _poll[0].revents = 0;
+
+        n = poll(_poll, 1, 1000*timeout);
+        if ( n <= 0 )
+                return false;
+
+        read_len = recv(Socket, buffer, sizeof(buffer), 0);
+        buffer[read_len] = '\0';
+
+	return Code_Check(buffer, Code);
+} 
 /************************CHECK CODE**************************/
 bool FtpClient::Code_Check(char * recv_line, const char * Code) {
 	char *token, *rest = recv_line;

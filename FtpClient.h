@@ -16,29 +16,34 @@ public:
 	FtpClient();
 	~FtpClient();
 
-	bool Connect(const char *, int);
+	bool Connect(const char *, int, int);
 	void Close();
 
-	bool Login(const char *, const char *);
-	bool Upload(char *);
+	bool Login(const char *, const char *, int);
+	bool Upload(char *, int);
 	
-	bool Current_Dir(char **);
-	bool List_Dir();
-	bool Change_Dir(char *);
-	bool Create_Dir(char *);
-	bool Remove_Dir(char *);
+	bool Current_Dir(char **, int);
+	bool List_Dir(int);
+	bool Change_Dir(char *, int);
+	bool Create_Dir(char *, int);
+	bool Remove_Dir(char *, int);
 
         int Create_Socket(const char *, int);
 	bool Exist_File(char *);
 	char* Get_Filename_By_Path(char *);
 
-	bool Send_Binary();
-	bool Send_ASCII();
-	bool Send_Passive();
+	bool Send_Binary(int);
+	bool Send_ASCII(int);
+	bool Send_Passive(int);
 
 	bool Send(const char *, ...);
+
 	char* Recv_Code_Buffer(const char *);
+	char* Recv_Code_Buffer(const char *, int);
+
 	bool Recv_Code(const char *);
+	bool Recv_Code(const char *, int);
+
 	bool Code_Check(char *, const char *);
 };
 
